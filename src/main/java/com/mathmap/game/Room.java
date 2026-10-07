@@ -454,9 +454,41 @@ public class Room {
         }
         List<String> headers = new ArrayList<>();
         for (Question q : asked) {
-            headers.add((questions.indexOf(q) + 1) + "번");
+            headers.add((questions.indexOf(q) + 1) + "번(" + q.getPoints() + "점)");
         }
-        return new ScoreSheet(headers, rows);
+        List<ScoreSheet.QuestionRow> questionRows = new ArrayList<>();
+        for (int i = 0; i < questions.size(); i++) {
+            Question q = questions.get(i);
+            int answered = 0;
+            int correct = 0;
+            for (Student st : students.values()) {
+                Student.Submission sub = st.getSubmissions().get(q.getId());
+                if (sub != null) {
+                    answered++;
+                    if (sub.correct()) {
+                        correct++;
+                    }
+                }
+            }
+            String status = switch (q.getStatus()) {
+                case PENDING -> "출제 전";
+                case OPEN -> "진행 중";
+                case CLOSED -> "마감";
+            };
+            String content = q.getText() == null ? "" : q.getText();
+            if (q.getImageId() != null) {
+                content = content.isEmpty() ? "(이미지 문제)" : "(이미지 문제) " + content;
+            }
+            List<String> choices = new ArrayList<>();
+            for (int c = 0; c < q.getChoices().size(); c++) {
+                choices.add((c + 1) + ". " + q.getChoices().get(c));
+            }
+            questionRows.add(new ScoreSheet.QuestionRow(i + 1, status,
+                    q.getKind() == QuestionKind.MULTIPLE ? "객관식" : "주관식",
+                    content, String.join("\n", choices), q.answerText(), q.getPoints(),
+                    answered, correct, students.size()));
+        }
+        return new ScoreSheet(headers, rows, questionRows);
     }
 
     private static String padNo(String no) {
@@ -478,7 +510,10 @@ public class Room {
             List<String> answers,
             Integer points) {}
 
-    public record ScoreSheet(List<String> questionHeaders, List<Row> rows) {
+    public record ScoreSheet(List<String> questionHeaders, List<Row> rows, List<QuestionRow> questions) {
         public record Row(String classNo, String name, int score, List<String> marks) {}
+
+        public record QuestionRow(int number, String status, String kind, String content, String choices,
+                                  String answer, int points, int answered, int correct, int studentCount) {}
     }
 }
