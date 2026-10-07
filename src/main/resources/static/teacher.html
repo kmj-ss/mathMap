@@ -8,27 +8,23 @@
 </head>
 <body class="teacher">
   <header class="topbar">
-    <h1>mathMap <small>선생님</small></h1>
+    <h1>mathMap <small id="room-name">선생님</small></h1>
     <div id="top-actions" class="top-actions hidden">
-      <form id="code-form" class="inline" autocomplete="off">
-        <label>입장 코드 <input id="code-input" maxlength="20" placeholder="예: 3반수학"></label>
-        <button type="submit">설정</button>
-      </form>
-      <span id="code-current" class="badge"></span>
+      <a href="/" class="button">방 목록</a>
       <button id="export-btn">엑셀 다운로드</button>
       <button id="reset-btn" class="danger">새 수업 시작</button>
-      <button id="logout-btn">로그아웃</button>
     </div>
   </header>
 
-  <!-- 로그인 -->
-  <section id="login-view" class="card narrow hidden">
-    <h2>선생님 로그인</h2>
-    <form id="login-form">
-      <label>비밀번호<input id="login-password" type="password" autocomplete="current-password" required></label>
-      <button type="submit" class="primary">로그인</button>
-      <p id="login-error" class="error" role="alert"></p>
-    </form>
+  <section id="share-bar" class="share-bar hidden">
+    <span class="field-label">학생 공유 주소</span>
+    <span id="share-url" class="share-url"></span>
+    <button id="copy-btn" type="button" class="primary">주소 복사</button>
+  </section>
+
+  <section id="error-view" class="card narrow center hidden">
+    <h2 id="error-title"></h2>
+    <a href="/" class="button primary">방 목록으로</a>
   </section>
 
   <div id="app" class="teacher-layout hidden">

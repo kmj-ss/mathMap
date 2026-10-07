@@ -3,7 +3,6 @@ package com.mathmap.ws;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
@@ -16,24 +15,24 @@ import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorato
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mathmap.game.GameService;
+import com.mathmap.game.Room;
 
-/** 연결된 선생님/학생 화면 목록을 들고 있다가 상태가 바뀌면 최신 화면 데이터를 보낸다. */
+/** 방마다 연결된 선생님/학생 화면 목록을 들고 있다가 상태가 바뀌면 최신 화면 데이터를 보낸다. */
 @Component
 public class Broadcaster {
 
     private static final Logger log = LoggerFactory.getLogger(Broadcaster.class);
 
-    private final GameService game;
     private final ObjectMapper mapper;
-    private final Set<WebSocketSession> teachers = ConcurrentHashMap.newKeySet();
-    /** ws 세션 id → (학생 id, 세션) */
-    private final Map<String, StudentConn> students = new ConcurrentHashMap<>();
+    /** ws 세션 id → 연결 정보 */
+    private final Map<String, Conn> conns = new ConcurrentHashMap<>();
 
-    record StudentConn(String studentId, WebSocketSession session) {}
+    /** studentId 가 null 이면 선생님 연결 */
+    record Conn(String roomId, String studentId, WebSocketSession session) {
+        boolean isTeacher() { return studentId == null; }
+    }
 
-    public Broadcaster(GameService game, ObjectMapper mapper) {
-        this.game = game;
+    public Broadcaster(ObjectMapper mapper) {
         this.mapper = mapper;
     }
 
@@ -42,24 +41,23 @@ public class Broadcaster {
     }
 
     // ── 선생님 ──
-    void addTeacher(WebSocketSession s) {
-        teachers.add(s);
-        send(s, game.teacherView());
+    void addTeacher(Room room, WebSocketSession s) {
+        conns.put(s.getId(), new Conn(room.getId(), null, s));
+        send(s, room.teacherView());
     }
 
-    void removeTeacher(WebSocketSession s) {
-        teachers.removeIf(t -> t.getId().equals(s.getId()));
-    }
-
-    public void pushTeachers() {
-        Map<String, Object> view = game.teacherView();
-        teachers.forEach(t -> send(t, view));
+    public void pushTeachers(Room room) {
+        Map<String, Object> view = room.teacherView();
+        conns.values().stream()
+                .filter(c -> c.isTeacher() && c.roomId().equals(room.getId()))
+                .forEach(c -> send(c.session(), view));
     }
 
     public void disconnectTeacherSession(String httpSessionId) {
-        teachers.removeIf(t -> {
-            if (Objects.equals(t.getAttributes().get(SessionAuthHandshakeInterceptor.ATTR_HTTP_SESSION), httpSessionId)) {
-                close(t, CloseStatus.NORMAL);
+        conns.values().removeIf(c -> {
+            if (c.isTeacher() && Objects.equals(
+                    c.session().getAttributes().get(SessionAuthHandshakeInterceptor.ATTR_HTTP_SESSION), httpSessionId)) {
+                close(c.session(), CloseStatus.NORMAL);
                 return true;
             }
             return false;
@@ -67,43 +65,48 @@ public class Broadcaster {
     }
 
     // ── 학생 ──
-    void addStudent(String studentId, WebSocketSession s) {
+    void addStudent(Room room, String studentId, WebSocketSession s) {
         // 같은 학생이 다른 창/기기로 다시 접속하면 이전 연결은 끊는다
-        students.values().removeIf(c -> {
-            if (c.studentId().equals(studentId)) {
+        conns.values().removeIf(c -> {
+            if (studentId.equals(c.studentId()) && c.roomId().equals(room.getId())) {
                 send(c.session(), Map.of("type", "replaced"));
                 close(c.session(), CloseStatus.NORMAL);
                 return true;
             }
             return false;
         });
-        students.put(s.getId(), new StudentConn(studentId, s));
-        game.setConnected(studentId, true);
-        pushStudent(studentId);
-        pushTeachers();
+        conns.put(s.getId(), new Conn(room.getId(), studentId, s));
+        room.setConnected(studentId, true);
+        pushStudent(room, studentId);
+        pushTeachers(room);
     }
 
-    void removeStudent(WebSocketSession s) {
-        StudentConn c = students.remove(s.getId());
-        if (c != null && students.values().stream().noneMatch(o -> o.studentId().equals(c.studentId()))) {
-            game.setConnected(c.studentId(), false);
-            pushTeachers();
-        }
+    /** 연결이 끊긴 경우. 끊긴 쪽이 학생이면 그 방 id 를 돌려준다. */
+    Conn remove(WebSocketSession s) {
+        return conns.remove(s.getId());
     }
 
-    public void pushStudent(String studentId) {
-        Map<String, Object> view = game.studentView(studentId);
-        students.values().stream().filter(c -> c.studentId().equals(studentId)).forEach(c -> send(c.session(), view));
+    boolean hasStudentConnection(String roomId, String studentId) {
+        return conns.values().stream().anyMatch(c -> studentId.equals(c.studentId()) && c.roomId().equals(roomId));
     }
 
-    public void pushAll() {
-        students.values().forEach(c -> send(c.session(), game.studentView(c.studentId())));
-        pushTeachers();
+    public void pushStudent(Room room, String studentId) {
+        Map<String, Object> view = room.studentView(studentId);
+        conns.values().stream()
+                .filter(c -> studentId.equals(c.studentId()) && c.roomId().equals(room.getId()))
+                .forEach(c -> send(c.session(), view));
     }
 
-    public void kickStudent(String studentId) {
-        students.values().removeIf(c -> {
-            if (c.studentId().equals(studentId)) {
+    public void pushAll(Room room) {
+        conns.values().stream()
+                .filter(c -> !c.isTeacher() && c.roomId().equals(room.getId()))
+                .forEach(c -> send(c.session(), room.studentView(c.studentId())));
+        pushTeachers(room);
+    }
+
+    public void kickStudent(Room room, String studentId) {
+        conns.values().removeIf(c -> {
+            if (studentId.equals(c.studentId()) && c.roomId().equals(room.getId())) {
                 send(c.session(), Map.of("type", "kicked"));
                 close(c.session(), CloseStatus.POLICY_VIOLATION);
                 return true;
@@ -112,12 +115,29 @@ public class Broadcaster {
         });
     }
 
-    public void disconnectAllStudents() {
-        students.values().forEach(c -> {
-            send(c.session(), Map.of("type", "reset"));
-            close(c.session(), CloseStatus.NORMAL);
+    /** 방의 학생 연결을 모두 끊는다 (새 수업 / 방 삭제) */
+    public void disconnectStudents(String roomId, String type) {
+        conns.values().removeIf(c -> {
+            if (!c.isTeacher() && c.roomId().equals(roomId)) {
+                send(c.session(), Map.of("type", type));
+                close(c.session(), CloseStatus.NORMAL);
+                return true;
+            }
+            return false;
         });
-        students.clear();
+    }
+
+    /** 방 삭제: 선생님/학생 연결 모두 끊기 */
+    public void closeRoom(String roomId) {
+        disconnectStudents(roomId, "closed");
+        conns.values().removeIf(c -> {
+            if (c.roomId().equals(roomId)) {
+                send(c.session(), Map.of("type", "closed"));
+                close(c.session(), CloseStatus.NORMAL);
+                return true;
+            }
+            return false;
+        });
     }
 
     private void send(WebSocketSession s, Object payload) {

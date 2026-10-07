@@ -9,7 +9,7 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-import com.mathmap.game.GameService.ScoreSheet;
+import com.mathmap.game.Room.ScoreSheet;
 
 /** 점수표를 엑셀(.xlsx) 파일로 만든다. 열: 학급번호, 이름, 총점, 1번, 2번 ... (O/X/-) */
 final class ExcelExporter {

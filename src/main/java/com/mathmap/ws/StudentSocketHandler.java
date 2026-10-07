@@ -13,7 +13,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mathmap.auth.RateLimiter;
 import com.mathmap.game.GameException;
-import com.mathmap.game.GameService;
+import com.mathmap.game.Room;
+import com.mathmap.game.RoomService;
 
 /**
  * 학생 화면과의 실시간 연결.
@@ -22,27 +23,28 @@ import com.mathmap.game.GameService;
 @Component
 public class StudentSocketHandler extends TextWebSocketHandler {
 
-    private final GameService game;
+    private final RoomService rooms;
     private final Broadcaster broadcaster;
     private final ObjectMapper mapper;
     /** 학생 한 명당 10초에 20개 메시지까지 */
     private final RateLimiter limiter = new RateLimiter(20, 10_000);
 
-    public StudentSocketHandler(GameService game, Broadcaster broadcaster, ObjectMapper mapper) {
-        this.game = game;
+    public StudentSocketHandler(RoomService rooms, Broadcaster broadcaster, ObjectMapper mapper) {
+        this.rooms = rooms;
         this.broadcaster = broadcaster;
         this.mapper = mapper;
     }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws IOException {
+        Room room = room(session);
         String studentId = studentId(session);
-        if (game.findStudent(studentId).isEmpty()) {
+        if (room == null || room.findStudent(studentId).isEmpty()) {
             session.sendMessage(new TextMessage("{\"type\":\"state\",\"status\":\"GONE\"}"));
             session.close(CloseStatus.NORMAL);
             return;
         }
-        broadcaster.addStudent(studentId, Broadcaster.wrap(session));
+        broadcaster.addStudent(room, studentId, Broadcaster.wrap(session));
     }
 
     @Override
@@ -60,10 +62,15 @@ public class StudentSocketHandler extends TextWebSocketHandler {
         if (!"answer".equals(node.path("type").asText())) {
             return;
         }
+        Room room = room(session);
+        if (room == null) {
+            session.close(CloseStatus.NORMAL);
+            return;
+        }
         try {
-            game.submit(studentId, node.path("questionId").asLong(-1), node.path("answer").asText(null));
-            broadcaster.pushStudent(studentId);
-            broadcaster.pushTeachers();
+            room.submit(studentId, node.path("questionId").asLong(-1), node.path("answer").asText(null));
+            broadcaster.pushStudent(room, studentId);
+            broadcaster.pushTeachers(room);
         } catch (GameException e) {
             session.sendMessage(new TextMessage(mapper.writeValueAsString(Map.of("type", "error", "message", e.getMessage()))));
         }
@@ -71,7 +78,18 @@ public class StudentSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-        broadcaster.removeStudent(session);
+        Broadcaster.Conn c = broadcaster.remove(session);
+        if (c == null || c.isTeacher() || broadcaster.hasStudentConnection(c.roomId(), c.studentId())) {
+            return;
+        }
+        rooms.find(c.roomId()).ifPresent(room -> {
+            room.setConnected(c.studentId(), false);
+            broadcaster.pushTeachers(room);
+        });
+    }
+
+    private Room room(WebSocketSession session) {
+        return rooms.find((String) session.getAttributes().get(SessionAuthHandshakeInterceptor.ATTR_ROOM_ID)).orElse(null);
     }
 
     private static String studentId(WebSocketSession session) {

@@ -1,6 +1,7 @@
 package com.mathmap.game;
 
 import java.security.SecureRandom;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HexFormat;
@@ -12,20 +13,16 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import org.springframework.stereotype.Service;
-
 /**
- * 수업 한 개의 모든 상태(입장 코드, 문제, 학생, 점수)를 서버 메모리에 보관한다.
+ * 방(수업) 한 개의 모든 상태(문제, 학생, 점수)를 서버 메모리에 보관한다.
  * 점수 계산과 채점은 전부 여기서만 이뤄지고, 브라우저가 보낸 점수 같은 값은 받지 않는다.
  * 모든 public 메서드는 synchronized 로 한 번에 하나씩만 실행된다.
  */
-@Service
-public class GameService {
+public class Room {
 
     public static final int DEFAULT_POINTS = 3;
     public static final String DEFAULT_WRONG_MESSAGE = "틀렸습니다";
 
-    private static final Pattern ENTRY_CODE = Pattern.compile("^[0-9A-Za-z가-힣]{2,20}$");
     private static final Pattern CLASS_NO = Pattern.compile("^[0-9]{1,10}$");
     private static final Pattern NAME = Pattern.compile("^[가-힣A-Za-z][가-힣A-Za-z ]{0,19}$");
     private static final int MAX_QUESTIONS = 300;
@@ -33,7 +30,10 @@ public class GameService {
 
     private final SecureRandom random = new SecureRandom();
 
-    private String entryCode;
+    private final String id;
+    private final String name;
+    private final Instant createdAt = Instant.now();
+    private volatile Instant lastActivity = Instant.now();
     private long nextQuestionId = 1;
     private final List<Question> questions = new ArrayList<>();
     private Question current;
@@ -42,19 +42,21 @@ public class GameService {
     /** 강퇴된 학생(학급번호|이름) */
     private final Set<String> kicked = new LinkedHashSet<>();
 
-    // ───────────────────────── 입장 코드 / 수업 ─────────────────────────
-
-    public synchronized void setEntryCode(String code) {
-        String trimmed = code == null ? "" : code.trim();
-        if (!ENTRY_CODE.matcher(trimmed).matches()) {
-            throw new GameException("입장 코드는 한글, 영문, 숫자로 2~20자여야 해요.");
-        }
-        this.entryCode = trimmed;
+    public Room(String id, String name) {
+        this.id = id;
+        this.name = name;
     }
 
-    public synchronized String getEntryCode() {
-        return entryCode;
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public Instant getCreatedAt() { return createdAt; }
+    public Instant getLastActivity() { return lastActivity; }
+
+    private void touch() {
+        lastActivity = Instant.now();
     }
+
+    // ───────────────────────── 수업 ─────────────────────────
 
     /** 새 수업: 학생, 점수, 강퇴 목록, 진행 상태를 비우고 문제는 모두 '대기'로 되돌린다. */
     public synchronized void resetClass() {
@@ -74,13 +76,8 @@ public class GameService {
      * 학생 입장. 같은 학급번호+이름이 이미 있으면 같은 학생으로 재접속 처리한다.
      * @return 학생 id (서버 세션에 저장)
      */
-    public synchronized Student join(String code, String classNo, String name) {
-        if (entryCode == null) {
-            throw new GameException("아직 수업이 열리지 않았어요. 선생님을 기다려 주세요.");
-        }
-        if (code == null || !entryCode.equals(code.trim())) {
-            throw new GameException("입장 코드가 맞지 않아요.");
-        }
+    public synchronized Student join(String classNo, String name) {
+        touch();
         String cn = classNo == null ? "" : classNo.trim();
         String nm = name == null ? "" : name.trim().replaceAll("\\s+", " ");
         if (!CLASS_NO.matcher(cn).matches()) {
@@ -114,6 +111,10 @@ public class GameService {
 
     private Optional<Student> findByKey(String key) {
         return students.values().stream().filter(s -> s.key().equals(key)).findFirst();
+    }
+
+    public synchronized int studentCount() {
+        return students.size();
     }
 
     public synchronized void setConnected(String studentId, boolean connected) {
@@ -151,6 +152,7 @@ public class GameService {
         if (answer == null || answer.isBlank() || answer.length() > 200) {
             throw new GameException("답을 입력해 주세요.");
         }
+        touch();
         boolean correct = current.isCorrect(answer);
         Student.Submission sub = new Student.Submission(answer.trim(), correct);
         s.getSubmissions().put(questionId, sub);
@@ -166,6 +168,7 @@ public class GameService {
         if (questions.size() >= MAX_QUESTIONS) {
             throw new GameException("문제는 최대 " + MAX_QUESTIONS + "개까지 등록할 수 있어요.");
         }
+        touch();
         Question q = new Question(nextQuestionId++);
         apply(q, in);
         questions.add(q);
@@ -193,6 +196,7 @@ public class GameService {
      * 진행 중인 문제는 자동으로 마감된다. 남은 문제가 없으면 '대기' 상태가 된다.
      */
     public synchronized Optional<Question> next(Long id) {
+        touch();
         if (current != null) {
             current.setStatus(QuestionStatus.CLOSED);
         }
@@ -306,6 +310,7 @@ public class GameService {
         Student s = students.get(studentId);
         Map<String, Object> view = new LinkedHashMap<>();
         view.put("type", "state");
+        view.put("roomName", name);
         if (s == null) {
             view.put("status", "GONE");
             return view;
@@ -342,7 +347,8 @@ public class GameService {
     public synchronized Map<String, Object> teacherView() {
         Map<String, Object> view = new LinkedHashMap<>();
         view.put("type", "dashboard");
-        view.put("entryCode", entryCode);
+        view.put("roomId", id);
+        view.put("roomName", name);
         view.put("currentId", current == null ? null : current.getId());
         view.put("status", current == null ? "WAITING" : current.getStatus().name());
 

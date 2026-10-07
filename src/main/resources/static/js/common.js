@@ -21,6 +21,28 @@ async function api(method, url, body) {
 }
 
 function $(id) { return document.getElementById(id); }
+
+/** /r/{방id} 또는 /t/{방id} 주소에서 방 id 꺼내기 */
+function roomIdFromPath() {
+  const m = location.pathname.match(/^\/[rt]\/([0-9a-z]{10})\/?$/);
+  return m ? m[1] : null;
+}
+
+/** 학생에게 보낼 공유 주소 */
+function shareUrl(roomId) {
+  return location.origin + '/r/' + roomId;
+}
+
+/** 클립보드 복사 (안 되면 선택 상자로 보여줌) */
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (e) {
+    window.prompt('아래 주소를 복사하세요', text);
+    return false;
+  }
+}
 function show(el, on) { el.classList.toggle('hidden', !on); }
 
 /** 요소를 만들고 글자는 항상 textContent 로 넣는다 (HTML 해석 안 함) */
@@ -45,7 +67,7 @@ function el(tag, props, ...children) {
  * 끊기면 자동으로 다시 연결하는 실시간 연결.
  * 태블릿 화면이 꺼졌다 켜지거나 와이파이가 잠깐 끊겨도 계속 다시 시도한다.
  */
-function connectSocket(path, onMessage) {
+function connectSocket(path, onMessage, onRetry) {
   let ws = null;
   let stopped = false;
   let retry = 0;
@@ -73,6 +95,7 @@ function connectSocket(path, onMessage) {
       if (my !== ws || stopped) return;
       clearInterval(pingTimer);
       retry++;
+      if (onRetry && retry % 3 === 0) onRetry(retry);
       clearTimeout(retryTimer);
       retryTimer = setTimeout(open, Math.min(1000 * retry, 5000));
     };

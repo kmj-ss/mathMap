@@ -28,7 +28,7 @@ public class Student {
     public Map<Long, Submission> getSubmissions() { return submissions; }
 
     public String key() {
-        return GameService.studentKey(classNo, name);
+        return Room.studentKey(classNo, name);
     }
 
     public record Submission(String answer, boolean correct) {}

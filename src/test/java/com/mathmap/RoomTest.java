@@ -12,20 +12,20 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.mathmap.game.GameException;
-import com.mathmap.game.GameService;
-import com.mathmap.game.GameService.QuestionInput;
+import com.mathmap.game.Room;
+import com.mathmap.game.Room.QuestionInput;
+import com.mathmap.game.RoomService;
 import com.mathmap.game.Question;
 import com.mathmap.game.QuestionKind;
 import com.mathmap.game.Student;
 
-class GameServiceTest {
+class RoomTest {
 
-    private GameService game;
+    private Room game;
 
     @BeforeEach
     void setUp() {
-        game = new GameService();
-        game.setEntryCode("3반수학");
+        game = new Room("abcdefghjk", "3반 수학");
     }
 
     private Question subjective(String answer, Integer points) {
@@ -33,13 +33,23 @@ class GameServiceTest {
     }
 
     @Test
-    void wrongEntryCodeIsRejected() {
-        assertThrows(GameException.class, () -> game.join("다른코드", "1", "김철수"));
+    void roomsAreSeparateAndIdsAreUnguessable() {
+        RoomService rooms = new RoomService();
+        Room a = rooms.create("1반");
+        Room b = rooms.create("2반");
+        assertTrue(RoomService.ROOM_ID.matcher(a.getId()).matches());
+        assertFalse(a.getId().equals(b.getId()));
+        a.join("1", "김철수");
+        assertEquals(1, a.studentCount());
+        assertEquals(0, b.studentCount());
+        assertTrue(rooms.find("../etc").isEmpty());
+        rooms.delete(a.getId());
+        assertTrue(rooms.find(a.getId()).isEmpty());
     }
 
     @Test
     void correctAnswerGetsDefaultThreePointsOnlyOnce() {
-        Student s = game.join("3반수학", "1", "김철수");
+        Student s = game.join("1", "김철수");
         Question q = subjective("12", null);
         game.next(null);
         assertTrue(game.submit(s.getId(), q.getId(), " 1 2 ").correct());
@@ -49,7 +59,7 @@ class GameServiceTest {
 
     @Test
     void wrongAnswerShowsTeacherMessage() {
-        Student s = game.join("3반수학", "1", "김철수");
+        Student s = game.join("1", "김철수");
         Question q = game.addQuestion(new QuestionInput("문제", null, QuestionKind.MULTIPLE,
                 List.of("1", "7"), 1, null, 5, "아쉬워요"));
         game.next(null);
@@ -62,7 +72,7 @@ class GameServiceTest {
 
     @Test
     void answerIsHiddenUntilClosed() {
-        Student s = game.join("3반수학", "1", "김철수");
+        Student s = game.join("1", "김철수");
         subjective("12", null);
         game.next(null);
         assertFalse(game.studentView(s.getId()).containsKey("correctAnswer"));
@@ -72,15 +82,15 @@ class GameServiceTest {
 
     @Test
     void rejoinKeepsScoreAndKickBlocksRejoin() {
-        Student s = game.join("3반수학", "1", "김철수");
-        assertEquals(s.getId(), game.join("3반수학", "1", "김철수").getId());
+        Student s = game.join("1", "김철수");
+        assertEquals(s.getId(), game.join("1", "김철수").getId());
         game.kick(s.getId());
-        assertThrows(GameException.class, () -> game.join("3반수학", "1", "김철수"));
+        assertThrows(GameException.class, () -> game.join("1", "김철수"));
     }
 
     @Test
     void cannotAnswerAfterClose() {
-        Student s = game.join("3반수학", "1", "김철수");
+        Student s = game.join("1", "김철수");
         Question q = subjective("12", null);
         game.next(null);
         game.closeCurrent();

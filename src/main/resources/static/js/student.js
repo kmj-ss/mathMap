@@ -2,6 +2,7 @@
 
 (function () {
   const views = ['join-view', 'wait-view', 'question-view', 'ended-view'];
+  const roomId = roomIdFromPath();
   let socket = null;
   let currentQuestionId = null;
   let selectedChoice = null;
@@ -21,24 +22,35 @@
   }
 
   async function init() {
-    try {
-      const me = await api('GET', '/api/student/me');
-      startSession(me);
-    } catch (e) {
-      showView('join-view');
+    if (!roomId) {
+      showEnded('주소가 올바르지 않아요', '선생님께 받은 방 주소로 들어와 주세요.', false);
+      return;
     }
+    try {
+      const info = await api('GET', '/api/rooms/' + roomId);
+      setRoomName(info.roomName);
+      if (info.me) startSession(info.me);
+      else showView('join-view');
+    } catch (e) {
+      showEnded(e.status === 404 ? '없는 방이에요' : '접속하지 못했어요', e.message, false);
+    }
+  }
+
+  function setRoomName(name) {
+    $('room-name').textContent = name || '';
+    document.title = (name ? name + ' · ' : '') + 'mathMap';
   }
 
   $('join-form').addEventListener('submit', async (ev) => {
     ev.preventDefault();
     $('join-error').textContent = '';
     try {
-      const me = await api('POST', '/api/student/join', {
-        entryCode: $('join-code').value,
+      const res = await api('POST', '/api/rooms/' + roomId + '/join', {
         classNo: $('join-no').value,
         name: $('join-name').value,
       });
-      startSession(me);
+      setRoomName(res.roomName);
+      startSession(res.me);
     } catch (e) {
       $('join-error').textContent = e.message;
     }
@@ -52,7 +64,15 @@
     $('me').textContent = me.classNo + '번 ' + me.name;
     show($('me'), true);
     showView('wait-view');
-    socket = connectSocket('/ws/student', onMessage);
+    socket = connectSocket('/ws/student?room=' + roomId, onMessage, async () => {
+      // 계속 연결이 안 되면 방이 아직 있는지, 입장 정보가 남아 있는지 확인
+      try {
+        const info = await api('GET', '/api/rooms/' + roomId);
+        if (!info.me) showEnded('입장 정보가 없어요', '다시 입장해 주세요.', true);
+      } catch (e) {
+        if (e.status === 404) showEnded('수업이 끝났어요', '선생님이 방을 닫았어요.', false);
+      }
+    });
   }
 
   function onMessage(msg) {
@@ -60,6 +80,7 @@
       case 'state': renderState(msg); break;
       case 'kicked': showEnded('퇴장되었어요', '선생님이 이 수업에서 내보냈어요.', false); break;
       case 'reset': showEnded('수업이 새로 시작됐어요', '다시 입장해 주세요.', true); break;
+      case 'closed': showEnded('수업이 끝났어요', '선생님이 방을 닫았어요.', false); break;
       case 'replaced': showEnded('다른 창에서 접속했어요', '이 창은 연결이 끊겼어요.', false); break;
       case 'error': showResultError(msg.message); break;
     }
