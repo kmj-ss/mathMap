@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: mathmap
+    runtime: docker
+    plan: starter
+    autoDeploy: true
+    healthCheckPath: /
+    envVars:
+      - key: MATHMAP_TEACHER_PASSWORD
+        sync: false
+      - key: MATHMAP_SECURE_COOKIE
+        value: "true"

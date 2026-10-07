@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>mathMap 선생님</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="teacher">
+  <header class="topbar">
+    <h1>mathMap <small>선생님</small></h1>
+    <div id="top-actions" class="top-actions hidden">
+      <form id="code-form" class="inline" autocomplete="off">
+        <label>입장 코드 <input id="code-input" maxlength="20" placeholder="예: 3반수학"></label>
+        <button type="submit">설정</button>
+      </form>
+      <span id="code-current" class="badge"></span>
+      <button id="export-btn">엑셀 다운로드</button>
+      <button id="reset-btn" class="danger">새 수업 시작</button>
+      <button id="logout-btn">로그아웃</button>
+    </div>
+  </header>
+
+  <!-- 로그인 -->
+  <section id="login-view" class="card narrow hidden">
+    <h2>선생님 로그인</h2>
+    <form id="login-form">
+      <label>비밀번호<input id="login-password" type="password" autocomplete="current-password" required></label>
+      <button type="submit" class="primary">로그인</button>
+      <p id="login-error" class="error" role="alert"></p>
+    </form>
+  </section>
+
+  <div id="app" class="teacher-layout hidden">
+    <main class="teacher-main">
+      <!-- 현재 진행 -->
+      <section class="card">
+        <div class="row between">
+          <h2>현재 진행</h2>
+          <div class="row">
+            <button id="close-btn">마감 및 정답 공개</button>
+            <button id="next-btn" class="primary">다음 문제 출제</button>
+          </div>
+        </div>
+        <div id="current-box" class="current-box"></div>
+      </section>
+
+      <!-- 문제 출제 -->
+      <section class="card">
+        <h2 id="editor-title">문제 등록</h2>
+        <form id="q-form" autocomplete="off">
+          <div class="row">
+            <span class="field-label">문제 형식</span>
+            <label class="radio"><input type="radio" name="content" value="text" checked> 직접 입력</label>
+            <label class="radio"><input type="radio" name="content" value="image"> 이미지 등록</label>
+          </div>
+          <textarea id="q-text-input" rows="3" maxlength="2000" placeholder="문제를 입력하세요"></textarea>
+          <div id="image-box" class="hidden">
+            <input type="file" id="q-image-input" accept="image/png,image/jpeg,image/gif,image/webp">
+            <img id="q-image-preview" class="q-image hidden" alt="미리보기">
+            <textarea id="q-image-caption" rows="2" maxlength="2000" placeholder="(선택) 이미지와 함께 보여줄 설명"></textarea>
+          </div>
+
+          <div class="row">
+            <span class="field-label">답 형식</span>
+            <label class="radio"><input type="radio" name="kind" value="SUBJECTIVE" checked> 주관식</label>
+            <label class="radio"><input type="radio" name="kind" value="MULTIPLE"> 객관식</label>
+          </div>
+
+          <div id="subjective-box">
+            <label>정답 <small class="muted">(여러 개 인정하려면 줄마다 하나씩)</small>
+              <textarea id="q-answers" rows="2" maxlength="2000" placeholder="예: 12"></textarea>
+            </label>
+          </div>
+          <div id="multiple-box" class="hidden">
+            <p class="muted">보기를 입력하고 정답 보기의 동그라미를 선택하세요.</p>
+            <div id="choice-list"></div>
+            <button type="button" id="add-choice">보기 추가</button>
+          </div>
+
+          <div class="row">
+            <label class="inline-label">배점 <input id="q-points" type="number" min="0" max="100" value="3"></label>
+            <label class="inline-label grow">오답 문구 <input id="q-wrong" maxlength="100" value="틀렸습니다"></label>
+          </div>
+          <div class="row">
+            <button type="submit" class="primary" id="q-save">등록</button>
+            <button type="button" id="q-cancel" class="hidden">수정 취소</button>
+          </div>
+          <p id="q-error" class="error" role="alert"></p>
+        </form>
+      </section>
+
+      <!-- 문제 목록 -->
+      <section class="card">
+        <h2>문제 목록</h2>
+        <ol id="q-list" class="q-list"></ol>
+      </section>
+    </main>
+
+    <!-- 우측 접속/점수 현황 -->
+    <aside id="side" class="side">
+      <button id="side-toggle" class="side-toggle" aria-expanded="true" title="접기/펼치기">▶</button>
+      <div class="side-body">
+        <h2>접속 현황 <span id="online-count" class="badge"></span></h2>
+        <p id="answer-progress" class="muted"></p>
+        <table class="score-table">
+          <thead><tr><th>번호</th><th>이름</th><th>점수</th><th>현재</th><th></th></tr></thead>
+          <tbody id="student-rows"></tbody>
+        </table>
+        <div id="kicked-box" class="hidden">
+          <h3>강퇴한 학생</h3>
+          <ul id="kicked-list" class="kicked-list"></ul>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script src="/js/common.js"></script>
+  <script src="/js/teacher.js"></script>
+</body>
+</html>

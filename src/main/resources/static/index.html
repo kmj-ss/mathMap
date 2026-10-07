@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>mathMap 수학 퀴즈</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="student">
+  <header class="topbar">
+    <h1>mathMap</h1>
+    <div id="me" class="me hidden"></div>
+  </header>
+
+  <main class="student-main">
+    <!-- 입장 화면 -->
+    <section id="join-view" class="card narrow hidden">
+      <h2>수업 입장</h2>
+      <form id="join-form" autocomplete="off">
+        <label>입장 코드<input id="join-code" maxlength="20" required></label>
+        <label>학급 번호<input id="join-no" inputmode="numeric" maxlength="10" required></label>
+        <label>이름<input id="join-name" maxlength="20" required></label>
+        <button type="submit" class="primary">입장하기</button>
+        <p id="join-error" class="error" role="alert"></p>
+      </form>
+    </section>
+
+    <!-- 대기 화면 -->
+    <section id="wait-view" class="card narrow center hidden">
+      <div class="spinner"></div>
+      <h2>문제를 기다리는 중이에요</h2>
+      <p class="muted">선생님이 문제를 올리면 바로 나타나요.</p>
+    </section>
+
+    <!-- 문제 화면 -->
+    <section id="question-view" class="card hidden">
+      <div class="q-head">
+        <span id="q-number" class="badge"></span>
+        <span id="q-points" class="muted"></span>
+      </div>
+      <p id="q-text" class="q-text"></p>
+      <img id="q-image" class="q-image hidden" alt="문제 이미지">
+
+      <form id="answer-form" autocomplete="off">
+        <div id="choices" class="choices"></div>
+        <div id="subjective" class="subjective hidden">
+          <input id="answer-input" maxlength="200" placeholder="답을 입력하세요">
+        </div>
+        <button type="submit" id="answer-submit" class="primary">제출</button>
+      </form>
+
+      <div id="result" class="result hidden" role="status"></div>
+      <div id="reveal" class="reveal hidden"></div>
+      <p id="next-hint" class="muted hidden">선생님이 다음 문제를 올릴 때까지 기다려 주세요.</p>
+    </section>
+
+    <!-- 종료/강퇴 화면 -->
+    <section id="ended-view" class="card narrow center hidden">
+      <h2 id="ended-title"></h2>
+      <p id="ended-text" class="muted"></p>
+      <button id="rejoin" class="primary hidden">다시 입장하기</button>
+    </section>
+  </main>
+
+  <script src="/js/common.js"></script>
+  <script src="/js/student.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "mathMap 실행",
+      "request": "launch",
+      "mainClass": "com.mathmap.MathMapApplication",
+      "projectName": "mathmap",
+      "env": {
+        "MATHMAP_TEACHER_PASSWORD": "local-test-1234"
+      }
+    }
+  ]
+}

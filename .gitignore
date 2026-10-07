@@ -1,0 +1,9 @@
+target/
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+.DS_Store
+*.log
+.env
