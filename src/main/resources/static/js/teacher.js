@@ -293,6 +293,10 @@
   }
   $('points-up').addEventListener('click', () => stepPoints(1));
   $('points-down').addEventListener('click', () => stepPoints(-1));
+  // 숫자만 입력되게
+  $('q-points').addEventListener('input', () => {
+    $('q-points').value = $('q-points').value.replace(/[^0-9]/g, '').slice(0, 3);
+  });
 
   // 수식 버튼: 마지막으로 입력하던 칸(문제/설명/보기)에 넣기
   let lastField = $('q-text-input');

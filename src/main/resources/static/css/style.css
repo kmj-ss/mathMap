@@ -201,11 +201,14 @@ button.small { padding: 4px 8px; min-height: 30px; font-size: 0.85rem; }
 .settings-row { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
 .settings-row input { width: auto; flex: 1; min-width: 160px; }
 .settings-row .inline-label { flex-wrap: wrap; }
-.stepper { display: inline-flex; align-items: stretch; }
-.stepper input { width: 70px !important; text-align: center; border-radius: 0; margin: 0; }
-.stepper button { min-width: 44px; padding: 6px 10px; }
-.stepper button:first-child { border-radius: 8px 0 0 8px; border-right: none; }
-.stepper button:last-child { border-radius: 0 8px 8px 0; border-left: none; }
+.stepper { display: inline-flex; align-items: center; gap: 8px; }
+.stepper input { width: 64px !important; text-align: center; margin: 0; font-weight: 700; }
+.round-btn {
+  width: 36px; height: 36px; min-height: 36px; padding: 0; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; font-weight: 700; line-height: 1; color: var(--primary); border-color: #c9d4fb; background: #eef2ff;
+}
+.round-btn:hover:not(:disabled) { background: #dfe6ff; }
 .history-box { max-width: 860px; margin: 0 auto; }
 .history-btn { width: 100%; min-height: 48px; font-weight: 600; }
 .history-item { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-top: 12px; }
