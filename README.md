@@ -78,21 +78,33 @@ mvn package                   # target/mathmap.jar 생성
 | `MATHMAP_SECURE_COOKIE` | HTTPS로 배포할 때 `true` (Dockerfile 기본값 true) |
 | `PORT` | 서버 포트 (기본 8080, 클라우드가 자동 지정) |
 
-## 클라우드 배포 (Render 추천)
+## 무료로 배포하기 (Render)
 
-Render는 GitHub 저장소를 연결하면 자동으로 빌드하고, `https://<이름>.onrender.com` 주소에 HTTPS 인증서까지 붙여줍니다.
+Render는 GitHub 저장소를 연결하면 자동으로 빌드하고, `https://<이름>.onrender.com` 주소에 HTTPS 인증서까지 붙여줍니다. 도메인은 필요 없습니다.
 
-1. https://render.com 가입 (GitHub 계정으로 로그인)
-2. **New → Blueprint** 선택 후 `mathMap` 저장소 연결 (저장소의 `render.yaml`을 읽습니다)
-3. `MATHMAP_TEACHER_PASSWORD` 값 입력 후 배포
-4. 배포가 끝나면 나오는 `https://...onrender.com` 주소로 접속해서 방을 만들고, 방의 공유 주소를 학생에게 보냅니다
+1. https://render.com 접속 → **Get Started** → **GitHub로 가입**
+2. Render가 GitHub 저장소 접근 권한을 물으면 `mathmap` 저장소를 허용
+3. 대시보드에서 **New +** → **Blueprint** 선택 → `mathmap` 저장소 선택 (`render.yaml`을 자동으로 읽습니다)
+4. `MATHMAP_TEACHER_PASSWORD` 칸에 선생님 비밀번호 입력 (8자 이상 권장) → **Apply** / **Deploy**
+5. 첫 빌드는 5~10분 정도 걸립니다. 로그에 `Started MathMapApplication` 이 보이면 완료
+6. 서비스 화면 위쪽의 `https://mathmap-xxxx.onrender.com` 주소로 접속 → 비밀번호 입력 → 방 만들기 → 공유 주소를 학생에게 보내기
 
-요금제 참고
-- **Starter(유료)**: 항상 켜져 있어 수업용으로 추천 (`render.yaml` 기본값)
-- **Free**: 15분 동안 접속이 없으면 잠들고, 깨어날 때 수업 기록이 사라집니다. 테스트용이면 `render.yaml`의 `plan`을 `free`로 바꾸세요.
+GitHub에 새 코드를 올리면(push) 자동으로 다시 배포됩니다.
 
-GitHub에 새로 올리면(push) 자동으로 다시 배포됩니다.
-도메인은 없어도 되고, 원하면 Render 설정의 Custom Domains에서 연결할 수 있습니다.
+### 무료 요금제에서 꼭 알아둘 점
+
+- 15분 동안 아무도 접속하지 않으면 서버가 잠듭니다. 다음 접속 때 깨어나는 데 **30초~1분** 걸립니다.
+- 잠들거나 다시 배포되면 **방, 학생, 점수, 문제가 모두 사라집니다.**
+- 그래서 이렇게 쓰세요.
+  1. 수업 시작 몇 분 전에 선생님이 먼저 사이트를 열어 서버를 깨우기
+  2. 방을 만들고 문제를 등록한 뒤 학생에게 주소 공유
+  3. 수업 중에는 학생들이 접속해 있어서 잠들지 않습니다
+  4. 수업이 끝나면 바로 **엑셀 다운로드**
+- 수업 중에 코드를 GitHub에 올리면 다시 배포되면서 진행 중인 수업이 사라지니, 수업 시간에는 push 하지 마세요.
+- 무료 요금제는 한 달 사용 시간 한도(750시간)가 있지만 서버 1개만 쓰면 넘지 않습니다.
+
+나중에 항상 켜져 있게 하려면 Render 서비스 설정에서 요금제를 **Starter(유료)** 로 바꾸면 됩니다.
+도메인을 쓰고 싶으면 Render 설정의 **Custom Domains**에서 연결할 수 있습니다.
 
 ## 알아둘 점
 
