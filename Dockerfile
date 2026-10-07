@@ -14,4 +14,4 @@ COPY --from=build /app/target/mathmap.jar app.jar
 USER mathmap
 ENV MATHMAP_SECURE_COOKIE=true
 EXPOSE 8080
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=70", "-XX:+UseSerialGC", "-Xss512k", "-jar", "app.jar"]

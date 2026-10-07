@@ -14,9 +14,12 @@ public class ImageStore {
 
     public static final int MAX_BYTES = 5 * 1024 * 1024;
     private static final int MAX_IMAGES = 300;
+    /** 무료 서버(메모리 512MB)에서도 버티도록 이미지 전체 용량을 80MB 로 제한. 넘으면 오래된 것부터 지운다. */
+    private static final long MAX_TOTAL_BYTES = 80L * 1024 * 1024;
 
     private final SecureRandom random = new SecureRandom();
     private final Map<String, StoredImage> images = new LinkedHashMap<>();
+    private long totalBytes;
 
     public synchronized String save(byte[] data) {
         if (data == null || data.length == 0) {
@@ -29,14 +32,15 @@ public class ImageStore {
         if (type == null) {
             throw new GameException("PNG, JPG, GIF, WEBP 이미지만 올릴 수 있어요.");
         }
-        if (images.size() >= MAX_IMAGES) {
+        while (!images.isEmpty() && (images.size() >= MAX_IMAGES || totalBytes + data.length > MAX_TOTAL_BYTES)) {
             String oldest = images.keySet().iterator().next();
-            images.remove(oldest);
+            totalBytes -= images.remove(oldest).data().length;
         }
         byte[] b = new byte[16];
         random.nextBytes(b);
         String id = HexFormat.of().formatHex(b);
         images.put(id, new StoredImage(type, data));
+        totalBytes += data.length;
         return id;
     }
 
