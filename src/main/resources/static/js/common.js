@@ -100,6 +100,11 @@ function connectSocket(path, onMessage, onRetry) {
       retryTimer = setTimeout(open, Math.min(1000 * retry, 5000));
     };
   }
+  // 화면이 열려 있는 동안 4분마다 서버에 신호 (무료 서버가 15분 동안 요청이 없으면 잠들기 때문)
+  const keepAlive = setInterval(() => {
+    if (!stopped) fetch('/api/ping', { cache: 'no-store', credentials: 'same-origin' }).catch(() => {});
+  }, 4 * 60 * 1000);
+
   // 화면이 다시 켜지면 기다리지 않고 바로 다시 연결
   document.addEventListener('visibilitychange', () => {
     if (!stopped && document.visibilityState === 'visible' && ws && ws.readyState > 1) {
@@ -110,7 +115,7 @@ function connectSocket(path, onMessage, onRetry) {
   open();
   return {
     send(obj) { if (ws && ws.readyState === 1) { ws.send(JSON.stringify(obj)); return true; } return false; },
-    stop() { stopped = true; clearInterval(pingTimer); clearTimeout(retryTimer); if (ws) ws.close(); },
+    stop() { stopped = true; clearInterval(keepAlive); clearInterval(pingTimer); clearTimeout(retryTimer); if (ws) ws.close(); },
   };
 }
 

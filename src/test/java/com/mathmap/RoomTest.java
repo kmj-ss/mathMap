@@ -107,6 +107,14 @@ class RoomTest {
     }
 
     @Test
+    void fractionAnswersIgnoreSpaces() {
+        Student s = game.join("1", "김철수");
+        Question q = subjective("1 2/3", null);
+        game.next(null);
+        assertTrue(game.submit(s.getId(), q.getId(), "1 2/3").correct());
+    }
+
+    @Test
     void cannotAnswerAfterClose() {
         Student s = game.join("1", "김철수");
         Question q = subjective("12", null);

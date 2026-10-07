@@ -44,7 +44,8 @@
       <form id="answer-form" autocomplete="off">
         <div id="choices" class="choices"></div>
         <div id="subjective" class="subjective hidden">
-          <input id="answer-input" maxlength="200" placeholder="답을 입력하세요">
+          <input id="answer-input" maxlength="200" placeholder="답을 입력하세요" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <p class="answer-hint muted small">분수는 <b>/</b> 로 입력해요. 예: 4분의 3 → <b>3/4</b>, 대분수 1과 3분의 2 → <b>1 2/3</b>, 음수 → <b>-1/2</b></p>
         </div>
         <button type="submit" id="answer-submit" class="primary">제출</button>
       </form>

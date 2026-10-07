@@ -219,3 +219,5 @@ button.small { padding: 4px 8px; min-height: 30px; font-size: 0.85rem; }
 .h-mark.none { color: var(--muted); }
 .h-line { margin: 6px 0 0; }
 .h-line.strong { font-weight: 700; }
+.answer-hint { margin: 8px 2px 0; line-height: 1.6; }
+.answer-hint b { color: var(--text); font-family: ui-monospace, Menlo, Consolas, monospace; background: #f0f1f5; padding: 0 6px; border-radius: 4px; }

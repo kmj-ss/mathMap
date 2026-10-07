@@ -153,7 +153,10 @@
       list.append(el('li', { class: 'muted', text: '등록된 문제가 없어요.' }));
       return;
     }
-    s.questions.forEach(q => {
+    // 진행 중 → 출제 전 → 마감 순서로 보여주기 (같은 상태 안에서는 번호 순)
+    const order = { OPEN: 0, PENDING: 1, CLOSED: 2 };
+    const sorted = [...s.questions].sort((a, b) => order[a.status] - order[b.status] || a.number - b.number);
+    sorted.forEach(q => {
       const label = { PENDING: '출제 전', OPEN: '진행 중', CLOSED: '마감' }[q.status];
       const actions = el('div', { class: 'row' });
       if (q.status === 'PENDING') {
