@@ -34,6 +34,8 @@ public class Room {
     private final String name;
     private final Instant createdAt = Instant.now();
     private volatile Instant lastActivity = Instant.now();
+    /** 틀렸을 때 학생에게 보여줄 문구 (방 전체 공통) */
+    private String wrongMessage = DEFAULT_WRONG_MESSAGE;
     private long nextQuestionId = 1;
     private final List<Question> questions = new ArrayList<>();
     private Question current;
@@ -57,6 +59,18 @@ public class Room {
     }
 
     // ───────────────────────── 수업 ─────────────────────────
+
+    public synchronized void setWrongMessage(String message) {
+        String m = message == null ? "" : message.trim();
+        if (m.isEmpty() || m.length() > 100) {
+            throw new GameException("오답 문구는 1~100자로 입력해 주세요.");
+        }
+        this.wrongMessage = m;
+    }
+
+    public synchronized String getWrongMessage() {
+        return wrongMessage;
+    }
 
     /** 새 수업: 학생, 점수, 강퇴 목록, 진행 상태를 비우고 문제는 모두 '대기'로 되돌린다. */
     public synchronized void resetClass() {
@@ -250,11 +264,6 @@ public class Room {
         if (points < 0 || points > 100) {
             throw new GameException("배점은 0~100점 사이로 입력해 주세요.");
         }
-        String wrong = in.wrongMessage() == null || in.wrongMessage().isBlank()
-                ? DEFAULT_WRONG_MESSAGE : in.wrongMessage().trim();
-        if (wrong.length() > 100) {
-            throw new GameException("오답 문구는 100자까지 입력할 수 있어요.");
-        }
         if (in.kind() == QuestionKind.MULTIPLE) {
             List<String> choices = clean(in.choices(), 100);
             if (choices.size() < 2 || choices.size() > 10) {
@@ -279,7 +288,6 @@ public class Room {
         q.setImageId(imageId);
         q.setKind(in.kind());
         q.setPoints(points);
-        q.setWrongMessage(wrong);
     }
 
     private static List<String> clean(List<String> list, int maxLen) {
@@ -316,6 +324,7 @@ public class Room {
             return view;
         }
         view.put("me", Map.of("classNo", s.getClassNo(), "name", s.getName(), "score", s.getScore()));
+        view.put("history", history(s));
         if (current == null) {
             view.put("status", "WAITING");
             return view;
@@ -335,12 +344,38 @@ public class Room {
             view.put("myResult", Map.of(
                     "answer", sub.answer(),
                     "correct", sub.correct(),
-                    "message", sub.correct() ? "정답입니다! +" + current.getPoints() + "점" : current.getWrongMessage()));
+                    "message", sub.correct() ? "정답입니다! +" + current.getPoints() + "점" : wrongMessage));
         }
         if (current.getStatus() == QuestionStatus.CLOSED) {
             view.put("correctAnswer", current.answerText());
         }
         return view;
+    }
+
+    /** 학생이 다시 볼 수 있는 지난 문제 (마감되어 정답이 공개된 문제만, 최근 것부터) */
+    private List<Map<String, Object>> history(Student s) {
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (int i = questions.size() - 1; i >= 0; i--) {
+            Question q = questions.get(i);
+            if (q.getStatus() != QuestionStatus.CLOSED || q == current) {
+                continue;
+            }
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", q.getId());
+            m.put("number", i + 1);
+            m.put("text", q.getText());
+            m.put("imageId", q.getImageId());
+            m.put("kind", q.getKind().name());
+            m.put("choices", q.getChoices());
+            m.put("points", q.getPoints());
+            m.put("correctAnswer", q.answerText());
+            Student.Submission sub = s.getSubmissions().get(q.getId());
+            m.put("myAnswer", sub == null ? null : q.displayAnswer(sub.answer()));
+            m.put("correct", sub != null && sub.correct());
+            m.put("answered", sub != null);
+            list.add(m);
+        }
+        return list;
     }
 
     /** 선생님 화면용 전체 상태(정답 포함) */
@@ -349,6 +384,7 @@ public class Room {
         view.put("type", "dashboard");
         view.put("roomId", id);
         view.put("roomName", name);
+        view.put("wrongMessage", wrongMessage);
         view.put("currentId", current == null ? null : current.getId());
         view.put("status", current == null ? "WAITING" : current.getStatus().name());
 
@@ -365,7 +401,6 @@ public class Room {
             m.put("answers", q.getAnswers());
             m.put("correctChoice", q.getCorrectChoice());
             m.put("points", q.getPoints());
-            m.put("wrongMessage", q.getWrongMessage());
             m.put("status", q.getStatus().name());
             m.put("answerText", q.answerText());
             qs.add(m);
@@ -441,8 +476,7 @@ public class Room {
             List<String> choices,
             Integer correctChoice,
             List<String> answers,
-            Integer points,
-            String wrongMessage) {}
+            Integer points) {}
 
     public record ScoreSheet(List<String> questionHeaders, List<Row> rows) {
         public record Row(String classNo, String name, int score, List<String> marks) {}

@@ -119,6 +119,16 @@ public class TeacherController {
 
     // ───────── 방 안의 수업 진행 ─────────
 
+    public record SettingsRequest(String wrongMessage) {}
+
+    @PostMapping("/rooms/{roomId}/settings")
+    public ResponseEntity<?> settings(@PathVariable String roomId, @RequestBody SettingsRequest body) {
+        Room room = rooms.get(roomId);
+        room.setWrongMessage(body.wrongMessage());
+        broadcaster.pushAll(room);
+        return ResponseEntity.ok(Map.of());
+    }
+
     @PostMapping("/rooms/{roomId}/reset")
     public ResponseEntity<?> reset(@PathVariable String roomId) {
         Room room = rooms.get(roomId);

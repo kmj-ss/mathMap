@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>mathMap 수학 퀴즈</title>
+  <link rel="stylesheet" href="/vendor/katex/katex.min.css">
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body class="student">
@@ -53,6 +54,12 @@
       <p id="next-hint" class="muted hidden">선생님이 다음 문제를 올릴 때까지 기다려 주세요.</p>
     </section>
 
+    <!-- 지난 문제 -->
+    <section id="history-box" class="history-box hidden">
+      <button id="history-btn" type="button" class="history-btn">지난 문제 보기</button>
+      <div id="history-list" class="hidden"></div>
+    </section>
+
     <!-- 종료/강퇴 화면 -->
     <section id="ended-view" class="card narrow center hidden">
       <h2 id="ended-title"></h2>
@@ -61,6 +68,7 @@
     </section>
   </main>
 
+  <script src="/vendor/katex/katex.min.js"></script>
   <script src="/js/common.js"></script>
   <script src="/js/student.js"></script>
 </body>

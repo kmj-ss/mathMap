@@ -191,3 +191,28 @@ button.small { padding: 4px 8px; min-height: 30px; font-size: 0.85rem; }
   .card { padding: 16px; margin: 12px auto; }
   .q-text { font-size: 1.1rem; }
 }
+
+/* ───── 수식 / 배점 / 지난 문제 ───── */
+.katex { font-size: 1.1em; }
+.math-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; }
+.math-tools button { min-width: 40px; }
+.math-preview-box { border: 1px dashed var(--line); border-radius: 8px; padding: 8px 12px; margin: 8px 0 12px; background: #fafbfe; }
+.math-preview .q-text { margin: 4px 0; }
+.settings-row { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.settings-row input { width: auto; flex: 1; min-width: 160px; }
+.settings-row .inline-label { flex-wrap: wrap; }
+.stepper { display: inline-flex; align-items: stretch; }
+.stepper input { width: 70px !important; text-align: center; border-radius: 0; margin: 0; }
+.stepper button { min-width: 44px; padding: 6px 10px; }
+.stepper button:first-child { border-radius: 8px 0 0 8px; border-right: none; }
+.stepper button:last-child { border-radius: 0 8px 8px 0; border-left: none; }
+.history-box { max-width: 860px; margin: 0 auto; }
+.history-btn { width: 100%; min-height: 48px; font-weight: 600; }
+.history-item { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-top: 12px; }
+.history-item .small-q { font-size: 1.05rem; }
+.h-mark { font-weight: 700; font-size: 0.9rem; }
+.h-mark.ok { color: var(--ok); }
+.h-mark.bad { color: var(--bad); }
+.h-mark.none { color: var(--muted); }
+.h-line { margin: 6px 0 0; }
+.h-line.strong { font-weight: 700; }

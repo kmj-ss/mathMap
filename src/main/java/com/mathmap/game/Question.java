@@ -17,7 +17,6 @@ public class Question {
     /** 객관식 정답 번호(0부터) */
     private int correctChoice;
     private int points;
-    private String wrongMessage;
     private QuestionStatus status = QuestionStatus.PENDING;
 
     public Question(long id) {
@@ -39,8 +38,6 @@ public class Question {
     public void setCorrectChoice(int correctChoice) { this.correctChoice = correctChoice; }
     public int getPoints() { return points; }
     public void setPoints(int points) { this.points = points; }
-    public String getWrongMessage() { return wrongMessage; }
-    public void setWrongMessage(String wrongMessage) { this.wrongMessage = wrongMessage; }
     public QuestionStatus getStatus() { return status; }
     public void setStatus(QuestionStatus status) { this.status = status; }
 
@@ -50,6 +47,21 @@ public class Question {
             return (correctChoice + 1) + "번. " + choices.get(correctChoice);
         }
         return String.join(" 또는 ", answers);
+    }
+
+    /** 학생이 낸 답을 보기 좋게 (객관식은 "2번. 7") */
+    public String displayAnswer(String submitted) {
+        if (kind == QuestionKind.MULTIPLE) {
+            try {
+                int i = Integer.parseInt(submitted.trim());
+                if (i >= 0 && i < choices.size()) {
+                    return (i + 1) + "번. " + choices.get(i);
+                }
+            } catch (NumberFormatException e) {
+                // 아래에서 원래 값 반환
+            }
+        }
+        return submitted;
     }
 
     /** 제출한 답이 맞는지 서버에서 판정 */

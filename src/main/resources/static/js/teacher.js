@@ -75,6 +75,15 @@
     window.location.href = base + '/export';
   });
 
+  $('wrong-form').addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    act(async () => {
+      await api('POST', base + '/settings', { wrongMessage: $('wrong-input').value });
+      $('wrong-saved').textContent = '저장됨';
+      setTimeout(() => { $('wrong-saved').textContent = ''; }, 1500);
+    });
+  });
+
   $('next-btn').addEventListener('click', () => act(() => api('POST', base + '/next', {})));
   $('close-btn').addEventListener('click', () => act(() => api('POST', base + '/close')));
 
@@ -94,6 +103,7 @@
   function render(s) {
     state = s;
     $('room-name').textContent = s.roomName;
+    if (document.activeElement !== $('wrong-input')) $('wrong-input').value = s.wrongMessage;
     document.title = s.roomName + ' · mathMap 선생님';
     renderCurrent(s);
     renderQuestions(s);
@@ -125,14 +135,14 @@
 
   function questionSummary(q) {
     const wrap = el('div', { class: 'q-summary' });
-    if (q.text) wrap.append(el('p', { class: 'q-text', text: q.text }));
+    if (q.text) wrap.append(mathEl('p', 'q-text', q.text));
     if (q.imageId) wrap.append(el('img', { class: 'q-thumb', src: '/images/' + q.imageId, alt: '문제 이미지' }));
     if (q.kind === 'MULTIPLE') {
       const ol = el('ol', { class: 'choice-preview' });
-      q.choices.forEach((c, i) => ol.append(el('li', { class: i === q.correctChoice ? 'correct' : '', text: c })));
+      q.choices.forEach((c, i) => ol.append(mathEl('li', i === q.correctChoice ? 'correct' : '', c)));
       wrap.append(ol);
     }
-    wrap.append(el('p', { class: 'muted small', text: (q.kind === 'MULTIPLE' ? '객관식' : '주관식') + ' · 정답: ' + q.answerText + ' · ' + q.points + '점 · 오답 문구: "' + q.wrongMessage + '"' }));
+    wrap.append(mathEl('p', 'muted small', (q.kind === 'MULTIPLE' ? '객관식' : '주관식') + ' · 정답: ' + q.answerText + ' · ' + q.points + '점'));
     return wrap;
   }
 
@@ -265,7 +275,6 @@
     $('q-image-caption').value = '';
     $('q-answers').value = '';
     $('q-points').value = '3';
-    $('q-wrong').value = '틀렸습니다';
     $('choice-list').replaceChildren();
     show($('q-image-preview'), false);
     $('q-error').textContent = '';
@@ -273,8 +282,55 @@
     $('q-save').textContent = '등록';
     show($('q-cancel'), false);
     syncEditor();
+    updatePreview();
   }
   $('q-cancel').addEventListener('click', resetEditor);
+
+  // 배점 +1 / -1
+  function stepPoints(d) {
+    const v = Math.round(Number($('q-points').value) || 0) + d;
+    $('q-points').value = String(Math.max(0, Math.min(100, v)));
+  }
+  $('points-up').addEventListener('click', () => stepPoints(1));
+  $('points-down').addEventListener('click', () => stepPoints(-1));
+
+  // 수식 버튼: 마지막으로 입력하던 칸(문제/설명/보기)에 넣기
+  let lastField = $('q-text-input');
+  $('q-form').addEventListener('focusin', (ev) => {
+    const t = ev.target;
+    if (t.id === 'q-text-input' || t.id === 'q-image-caption' || t.classList.contains('choice-text')) lastField = t;
+  });
+  $('math-tools').addEventListener('click', (ev) => {
+    const b = ev.target.closest('button[data-insert]');
+    if (!b) return;
+    let f = lastField;
+    if (!document.body.contains(f) || f.offsetParent === null) {
+      f = radioValue('content') === 'image' ? $('q-image-caption') : $('q-text-input');
+    }
+    const text = b.dataset.insert;
+    const start = f.selectionStart ?? f.value.length;
+    const end = f.selectionEnd ?? f.value.length;
+    f.value = f.value.slice(0, start) + text + f.value.slice(end);
+    f.focus();
+    f.setSelectionRange(start + text.length, start + text.length);
+    updatePreview();
+  });
+
+  // 수식 미리보기
+  function updatePreview() {
+    const image = radioValue('content') === 'image';
+    const text = image ? $('q-image-caption').value : $('q-text-input').value;
+    const choices = radioValue('kind') === 'MULTIPLE'
+      ? [...document.querySelectorAll('.choice-text')].map(c => c.value).filter(v => v.includes('$')) : [];
+    const has = text.includes('$') || choices.length > 0;
+    show($('math-preview-box'), has);
+    if (!has) return;
+    const box = $('math-preview');
+    box.replaceChildren();
+    if (text) box.append(mathEl('p', 'q-text', text));
+    choices.forEach(c => box.append(mathEl('p', 'small', '보기: ' + c)));
+  }
+  $('q-form').addEventListener('input', updatePreview);
 
   function startEdit(q) {
     resetEditor();
@@ -293,11 +349,11 @@
     if (q.kind === 'MULTIPLE') q.choices.forEach((c, i) => addChoice(c, i === q.correctChoice));
     else $('q-answers').value = q.answers.join('\n');
     $('q-points').value = String(q.points);
-    $('q-wrong').value = q.wrongMessage;
     $('editor-title').textContent = q.number + '번 문제 수정';
     $('q-save').textContent = '수정 저장';
     show($('q-cancel'), true);
     syncEditor();
+    updatePreview();
     $('q-form').scrollIntoView({ behavior: 'smooth' });
   }
 
@@ -315,7 +371,6 @@
       imageId: image ? uploadedImageId : null,
       kind,
       points: Number($('q-points').value),
-      wrongMessage: $('q-wrong').value,
     };
     if (kind === 'MULTIPLE') {
       const rows = [...$('choice-list').children];

@@ -113,3 +113,54 @@ function connectSocket(path, onMessage, onRetry) {
     stop() { stopped = true; clearInterval(pingTimer); clearTimeout(retryTimer); if (ws) ws.close(); },
   };
 }
+
+/**
+ * 글자 안의 $...$ 부분을 수식으로 그려서 target 에 넣는다. (\$ 는 그냥 $ 글자)
+ * 수식이 아닌 부분은 항상 텍스트로만 넣는다.
+ */
+function renderMath(target, text) {
+  target.replaceChildren();
+  if (!text) return target;
+  const parts = [];
+  let buf = '';
+  let math = null;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '\\' && text[i + 1] === '$') {
+      if (math !== null) math += '\\$'; else buf += '$';
+      i++;
+    } else if (c === '$') {
+      if (math === null) { if (buf) parts.push({ t: buf }); buf = ''; math = ''; }
+      else { parts.push({ m: math }); math = null; }
+    } else if (math !== null) {
+      math += c;
+    } else {
+      buf += c;
+    }
+  }
+  if (math !== null) buf += '$' + math; // 닫히지 않은 $ 는 글자로
+  if (buf) parts.push({ t: buf });
+  for (const p of parts) {
+    if (p.t !== undefined) {
+      target.append(document.createTextNode(p.t));
+    } else if (window.katex && p.m.trim()) {
+      const span = document.createElement('span');
+      try {
+        window.katex.render(p.m, span, { throwOnError: false, trust: false, strict: 'ignore' });
+      } catch (e) {
+        span.textContent = '$' + p.m + '$';
+      }
+      target.append(span);
+    } else {
+      target.append(document.createTextNode('$' + p.m + '$'));
+    }
+  }
+  return target;
+}
+
+/** 수식이 들어간 요소 만들기 */
+function mathEl(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  return renderMath(e, text);
+}

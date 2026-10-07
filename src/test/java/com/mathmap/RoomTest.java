@@ -29,7 +29,7 @@ class RoomTest {
     }
 
     private Question subjective(String answer, Integer points) {
-        return game.addQuestion(new QuestionInput("문제", null, QuestionKind.SUBJECTIVE, null, null, List.of(answer), points, null));
+        return game.addQuestion(new QuestionInput("문제", null, QuestionKind.SUBJECTIVE, null, null, List.of(answer), points));
     }
 
     @Test
@@ -61,7 +61,8 @@ class RoomTest {
     void wrongAnswerShowsTeacherMessage() {
         Student s = game.join("1", "김철수");
         Question q = game.addQuestion(new QuestionInput("문제", null, QuestionKind.MULTIPLE,
-                List.of("1", "7"), 1, null, 5, "아쉬워요"));
+                List.of("1", "7"), 1, null, 5));
+        game.setWrongMessage("아쉬워요");
         game.next(null);
         assertFalse(game.submit(s.getId(), q.getId(), "0").correct());
         @SuppressWarnings("unchecked")
@@ -86,6 +87,23 @@ class RoomTest {
         assertEquals(s.getId(), game.join("1", "김철수").getId());
         game.kick(s.getId());
         assertThrows(GameException.class, () -> game.join("1", "김철수"));
+    }
+
+    @Test
+    void historyShowsOnlyClosedQuestionsWithMyAnswer() {
+        Student s = game.join("1", "김철수");
+        Question q1 = subjective("12", null);
+        subjective("7", null);
+        game.next(null);
+        game.submit(s.getId(), q1.getId(), "13");
+        assertTrue(((List<?>) game.studentView(s.getId()).get("history")).isEmpty());
+        game.next(null);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> history = (List<Map<String, Object>>) game.studentView(s.getId()).get("history");
+        assertEquals(1, history.size());
+        assertEquals("13", history.get(0).get("myAnswer"));
+        assertEquals("12", history.get(0).get("correctAnswer"));
+        assertEquals(false, history.get(0).get("correct"));
     }
 
     @Test

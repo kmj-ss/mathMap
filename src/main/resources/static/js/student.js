@@ -18,6 +18,7 @@
     $('ended-text').textContent = text;
     show($('rejoin'), canRejoin);
     show($('me'), false);
+    show($('history-box'), false);
     showView('ended-view');
   }
 
@@ -92,6 +93,7 @@
       return;
     }
     $('me').textContent = s.me.classNo + '번 ' + s.me.name + ' · ' + s.me.score + '점';
+    renderHistory(s.history || []);
     if (s.status === 'WAITING' || !s.question) {
       currentQuestionId = null;
       showView('wait-view');
@@ -105,7 +107,7 @@
 
     $('q-number').textContent = q.number + '번 문제';
     $('q-points').textContent = q.points + '점';
-    $('q-text').textContent = q.text || '';
+    renderMath($('q-text'), q.text || '');
     show($('q-text'), !!q.text);
     if (q.imageId) {
       $('q-image').src = '/images/' + encodeURIComponent(q.imageId);
@@ -147,7 +149,7 @@
     }
 
     if (closed && s.correctAnswer) {
-      $('reveal').textContent = '정답: ' + s.correctAnswer;
+      renderMath($('reveal'), '정답: ' + s.correctAnswer);
       show($('reveal'), true);
     } else {
       show($('reveal'), false);
@@ -162,7 +164,47 @@
       box.append(el('button', {
         type: 'button', class: 'choice', 'data-index': String(i),
         onclick: () => markChoice(i),
-      }, el('span', { class: 'choice-no', text: String(i + 1) }), c));
+      }, el('span', { class: 'choice-no', text: String(i + 1) }), mathEl('span', 'choice-label', c)));
+    });
+  }
+
+  // ───────── 지난 문제 ─────────
+  let historyOpen = false;
+  let historyCount = 0;
+
+  $('history-btn').addEventListener('click', () => {
+    historyOpen = !historyOpen;
+    show($('history-list'), historyOpen);
+    updateHistoryButton();
+    if (historyOpen) $('history-list').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  function updateHistoryButton() {
+    $('history-btn').textContent = historyOpen ? '지난 문제 닫기' : '지난 문제 보기 (' + historyCount + ')';
+  }
+
+  function renderHistory(items) {
+    historyCount = items.length;
+    show($('history-box'), items.length > 0);
+    updateHistoryButton();
+    const list = $('history-list');
+    list.replaceChildren();
+    items.forEach(h => {
+      const mark = !h.answered ? el('span', { class: 'h-mark none', text: '미제출' })
+        : el('span', { class: 'h-mark ' + (h.correct ? 'ok' : 'bad'), text: h.correct ? 'O 정답 +' + h.points + '점' : 'X 오답' });
+      const card = el('article', { class: 'history-item' },
+        el('div', { class: 'q-head' }, el('span', { class: 'badge', text: h.number + '번 문제' }), mark));
+      if (h.text) card.append(mathEl('p', 'q-text small-q', h.text));
+      if (h.imageId) card.append(el('img', { class: 'q-image', src: '/images/' + encodeURIComponent(h.imageId), alt: '문제 이미지', loading: 'lazy' }));
+      if (h.kind === 'MULTIPLE') {
+        const ol = el('ol', { class: 'choice-preview' });
+        h.choices.forEach(c => ol.append(mathEl('li', '', c)));
+        card.append(ol);
+      }
+      card.append(
+        mathEl('p', 'h-line', '내 답: ' + (h.answered ? h.myAnswer : '(제출 안 함)')),
+        mathEl('p', 'h-line strong', '정답: ' + h.correctAnswer));
+      list.append(card);
     });
   }
 
