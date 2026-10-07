@@ -84,9 +84,9 @@ final class ExcelExporter {
             x.createCell(0).setCellValue(q.number());
             x.createCell(1).setCellValue(q.status());
             x.createCell(2).setCellValue(q.kind());
-            x.createCell(3).setCellValue(q.content());
-            x.createCell(4).setCellValue(q.choices());
-            x.createCell(5).setCellValue(q.answer());
+            x.createCell(3).setCellValue(MathText.toPlain(q.content()));
+            x.createCell(4).setCellValue(MathText.toPlain(q.choices()));
+            x.createCell(5).setCellValue(MathText.toPlain(q.answer()));
             x.createCell(6).setCellValue(q.points());
             x.createCell(7).setCellValue(q.answered() + "/" + q.studentCount());
             x.createCell(8).setCellValue(q.correct());
